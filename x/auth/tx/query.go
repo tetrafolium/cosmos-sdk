@@ -64,6 +64,18 @@ func QueryTxsByEvents(clientCtx client.Context, events []string, page, limit int
 	return result, nil
 }
 
+//func QueryAllBlockTxs(clientCtx client.Context, hashHexStrSlc []string) ([]*sdk.TxResponse, error) {
+//	txns := make([]*sdk.TxResponse, len(hashHexStrSlc))
+//	for i, hash := range hashHexStrSlc {
+//		tx, err := QueryTx(clientCtx, hash)
+//		if err != nil {
+//			return nil, err
+//		}
+//		txns[i] = tx
+//	}
+//	return txns, nil
+//}
+
 // QueryTx queries for a single transaction by a hash string in hex format. An
 // error is returned if the transaction does not exist or cannot be queried.
 func QueryTx(clientCtx client.Context, hashHexStr string) (*sdk.TxResponse, error) {
