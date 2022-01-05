@@ -126,8 +126,7 @@ func (s IntegrationTestSuite) TestQueryBlockByHeight() {
 	restRes, err := rest.GetRequest(fmt.Sprintf("%s/cosmos/base/tendermint/v1beta1/blocks/%d", val.APIAddress, s.startingHeight))
 	s.Require().NoError(err)
 	var blockInfoRes tmservice.GetBlockByHeightResponse
-	err = val.ClientCtx.Codec.UnmarshalJSON(restRes, &blockInfoRes)
-	s.Require().NoError(err)
+	s.Require().NoError(val.ClientCtx.Codec.UnmarshalJSON(restRes, &blockInfoRes))
 	s.Require().NotZero(len(blockInfoRes.Txns), "expected transactions in this block")
 	s.Require().Equal(blockInfoRes.Txns[0].Body.Memo, "foobar")
 }
