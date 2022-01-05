@@ -126,7 +126,6 @@ func (s IntegrationTestSuite) TestQueryBlockByHeight() {
 	var blockInfoRes tmservice.GetBlockByHeightResponse
 	s.Require().NoError(val.ClientCtx.Codec.UnmarshalJSON(restRes, &blockInfoRes))
 	s.Require().NotZero(len(blockInfoRes.Txns), "expected transactions in this block")
-	fmt.Println(blockInfoRes)
 	s.Require().Equal(blockInfoRes.Txns[0].TypeUrl, "/cosmos.tx.v1beta1.Tx")
 }
 
