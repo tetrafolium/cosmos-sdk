@@ -3,6 +3,9 @@ package tmservice_test
 import (
 	"context"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -23,6 +26,9 @@ type IntegrationTestSuite struct {
 	network *network.Network
 
 	queryClient tmservice.ServiceClient
+
+	startingHeight int64
+	txRes          *sdk.TxResponse
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -37,10 +43,36 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.network, err = network.New(s.T(), s.T().TempDir(), s.cfg)
 	s.Require().NoError(err)
 
+	val := s.network.Validators[0]
+
 	_, err = s.network.WaitForHeight(1)
 	s.Require().NoError(err)
 
 	s.queryClient = tmservice.NewServiceClient(s.network.Validators[0].ClientCtx)
+
+	// Create a new MsgSend tx from val to itself.
+	out, err := bankcli.MsgSendExec(
+		val.ClientCtx,
+		val.Address,
+		val.Address,
+		sdk.NewCoins(
+			sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10)),
+		),
+		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastSync),
+		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s=foobar", flags.FlagNote),
+	)
+	var txRes sdk.TxResponse
+	s.Require().NoError(err)
+	s.Require().NoError(val.ClientCtx.Codec.UnmarshalJSON(out.Bytes(), &txRes))
+	s.Require().Equal(uint32(0), txRes.Code)
+	s.Require().NoError(s.network.WaitForNextBlock())
+	height, err := s.network.LatestHeight()
+	s.Require().NoError(err)
+	s.startingHeight = height
+	s.txRes = &txRes
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
@@ -91,10 +123,13 @@ func (s IntegrationTestSuite) TestQueryBlockByHeight() {
 	_, err := s.queryClient.GetBlockByHeight(context.Background(), &tmservice.GetBlockByHeightRequest{Height: 1})
 	s.Require().NoError(err)
 
-	restRes, err := rest.GetRequest(fmt.Sprintf("%s/cosmos/base/tendermint/v1beta1/blocks/%d", val.APIAddress, 1))
+	restRes, err := rest.GetRequest(fmt.Sprintf("%s/cosmos/base/tendermint/v1beta1/blocks/%d", val.APIAddress, s.startingHeight))
 	s.Require().NoError(err)
 	var blockInfoRes tmservice.GetBlockByHeightResponse
-	s.Require().NoError(val.ClientCtx.Codec.UnmarshalJSON(restRes, &blockInfoRes))
+	err = val.ClientCtx.Codec.UnmarshalJSON(restRes, &blockInfoRes)
+	s.Require().NoError(err)
+	s.Require().NotZero(len(blockInfoRes.Txns), "expected transactions in this block")
+	s.Require().Equal(blockInfoRes.Txns[0].Body.Memo, "foobar")
 }
 
 func (s IntegrationTestSuite) TestQueryLatestValidatorSet() {

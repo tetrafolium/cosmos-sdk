@@ -2,9 +2,12 @@ package tmservice
 
 import (
 	"context"
-
+	"fmt"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	gogogrpc "github.com/gogo/protobuf/grpc"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -78,6 +81,26 @@ func (s queryServer) GetBlockByHeight(ctx context.Context, req *GetBlockByHeight
 	if err != nil {
 		return nil, err
 	}
+
+	var txns []*txtypes.Tx
+	if res.Block != nil {
+		txns = make([]*txtypes.Tx, len(res.Block.Txs))
+		for i, tx := range res.Block.Data.Txs {
+			txHexStr := fmt.Sprintf("%X", tmhash.Sum(tx))
+			res, err := authtx.QueryTx(s.clientCtx, txHexStr)
+			if err != nil {
+				return nil, err
+			}
+
+			protoTx, ok := res.Tx.GetCachedValue().(*txtypes.Tx)
+			if !ok {
+				return nil, status.Errorf(codes.Internal, "expected %T, got %T", txtypes.Tx{}, res.Tx.GetCachedValue())
+			}
+
+			txns[i] = protoTx
+		}
+	}
+
 	protoBlockID := res.BlockID.ToProto()
 	protoBlock, err := res.Block.ToProto()
 	if err != nil {
@@ -86,6 +109,7 @@ func (s queryServer) GetBlockByHeight(ctx context.Context, req *GetBlockByHeight
 	return &GetBlockByHeightResponse{
 		BlockId: &protoBlockID,
 		Block:   protoBlock,
+		Txns:    txns,
 	}, nil
 }
 
