@@ -3,11 +3,8 @@ package tmservice
 import (
 	"context"
 	"fmt"
-	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
-	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	gogogrpc "github.com/gogo/protobuf/grpc"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/tendermint/tendermint/crypto/tmhash"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -66,6 +63,12 @@ func (s queryServer) GetLatestBlock(ctx context.Context, _ *GetLatestBlockReques
 	}, nil
 }
 
+// Deprecated: this interface is used only internally for scenario we are
+// deprecating (StdTxConfig support)
+type intoAny interface {
+	AsAny() *codectypes.Any
+}
+
 // GetBlockByHeight implements ServiceServer.GetBlockByHeight
 func (s queryServer) GetBlockByHeight(ctx context.Context, req *GetBlockByHeightRequest) (*GetBlockByHeightResponse, error) {
 	chainHeight, err := rpc.GetChainHeight(s.clientCtx)
@@ -82,22 +85,21 @@ func (s queryServer) GetBlockByHeight(ctx context.Context, req *GetBlockByHeight
 		return nil, err
 	}
 
-	var txns []*txtypes.Tx
+	var txns []*codectypes.Any
 	if res.Block != nil {
-		txns = make([]*txtypes.Tx, len(res.Block.Txs))
+		txns = make([]*codectypes.Any, len(res.Block.Txs))
 		for i, tx := range res.Block.Data.Txs {
-			txHexStr := fmt.Sprintf("%X", tmhash.Sum(tx))
-			res, err := authtx.QueryTx(s.clientCtx, txHexStr)
+			txb, err := s.clientCtx.TxConfig.TxDecoder()(tx)
 			if err != nil {
 				return nil, err
 			}
 
-			protoTx, ok := res.Tx.GetCachedValue().(*txtypes.Tx)
+			p, ok := txb.(intoAny)
 			if !ok {
-				return nil, status.Errorf(codes.Internal, "expected %T, got %T", txtypes.Tx{}, res.Tx.GetCachedValue())
+				return nil, fmt.Errorf("expecting a type implementing intoAny, got: %T", txb)
 			}
-
-			txns[i] = protoTx
+			any := p.AsAny()
+			txns[i] = any
 		}
 	}
 

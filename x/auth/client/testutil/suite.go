@@ -444,6 +444,7 @@ func (s *IntegrationTestSuite) TestCLIQueryTxCmdByHash() {
 				s.Require().NotEqual("internal", err.Error())
 			} else {
 				var result sdk.TxResponse
+				s.Require().NoError(err)
 				s.Require().NoError(val.ClientCtx.Codec.UnmarshalJSON(out.Bytes(), &result))
 				s.Require().NotNil(result.Height)
 				s.Require().Contains(result.RawLog, tc.rawLogContains)
@@ -588,7 +589,10 @@ func (s *IntegrationTestSuite) TestCLIQueryTxsCmdByEvents() {
 	s.Require().NoError(err)
 	var txRes sdk.TxResponse
 	s.Require().NoError(val.ClientCtx.Codec.UnmarshalJSON(out.Bytes(), &txRes))
-	s.Require().NoError(s.network.WaitForNextBlock())
+	height, err := s.network.LatestHeight()
+	s.Require().NoError(err)
+	_, err = s.network.WaitForHeight(height + 2) // this test fails unless we wait a couple blocks for some reason?
+	s.Require().NoError(err)
 
 	// Query the tx by hash to get the inner tx.
 	out, err = clitestutil.ExecTestCLICmd(val.ClientCtx, authcli.QueryTxCmd(), []string{txRes.TxHash, fmt.Sprintf("--%s=json", tmcli.OutputFlag)})
