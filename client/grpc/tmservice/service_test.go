@@ -28,7 +28,6 @@ type IntegrationTestSuite struct {
 	queryClient tmservice.ServiceClient
 
 	startingHeight int64
-	txRes          *sdk.TxResponse
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -72,7 +71,6 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	height, err := s.network.LatestHeight()
 	s.Require().NoError(err)
 	s.startingHeight = height
-	s.txRes = &txRes
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
