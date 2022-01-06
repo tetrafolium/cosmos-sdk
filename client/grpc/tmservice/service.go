@@ -3,6 +3,7 @@ package tmservice
 import (
 	"context"
 	"fmt"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	gogogrpc "github.com/gogo/protobuf/grpc"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"google.golang.org/grpc/codes"
@@ -69,6 +70,14 @@ type intoAny interface {
 	AsAny() *codectypes.Any
 }
 
+// protoTxProvider is a type which can provide a proto transaction. It is a
+// workaround to get access to the wrapper TxBuilder's method GetProtoTx().
+// Deprecated: It's only used for testing the deprecated Simulate gRPC endpoint
+// using a proto Tx field.
+type protoTxProvider interface {
+	GetProtoTx() *txtypes.Tx
+}
+
 // GetBlockByHeight implements ServiceServer.GetBlockByHeight
 func (s queryServer) GetBlockByHeight(ctx context.Context, req *GetBlockByHeightRequest) (*GetBlockByHeightResponse, error) {
 	chainHeight, err := rpc.GetChainHeight(s.clientCtx)
@@ -85,21 +94,21 @@ func (s queryServer) GetBlockByHeight(ctx context.Context, req *GetBlockByHeight
 		return nil, err
 	}
 
-	var txns []*codectypes.Any
+	var txns []*txtypes.Tx
 	if res.Block != nil {
-		txns = make([]*codectypes.Any, len(res.Block.Txs))
+		txns = make([]*txtypes.Tx, len(res.Block.Txs))
 		for i, tx := range res.Block.Data.Txs {
 			txb, err := s.clientCtx.TxConfig.TxDecoder()(tx)
 			if err != nil {
 				return nil, err
 			}
 
-			p, ok := txb.(intoAny)
+			p, ok := txb.(protoTxProvider)
 			if !ok {
-				return nil, fmt.Errorf("expecting a type implementing intoAny, got: %T", txb)
+				return nil, fmt.Errorf("could not cast %T to %T", txb, txtypes.Tx{})
 			}
-			any := p.AsAny()
-			txns[i] = any
+			protoTx := p.GetProtoTx()
+			txns[i] = protoTx
 		}
 	}
 
