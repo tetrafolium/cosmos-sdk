@@ -376,7 +376,8 @@ func (m *GetBlockByHeightRequest) GetHeight() int64 {
 type GetBlockByHeightResponse struct {
 	BlockId *types1.BlockID `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
 	Block   *types1.Block   `protobuf:"bytes,2,opt,name=block,proto3" json:"block,omitempty"`
-	Txns    []*tx.Tx        `protobuf:"bytes,3,rep,name=txns,proto3" json:"txns,omitempty"`
+	// Since: cosmos-sdk 0.44.6
+	Txns []*tx.Tx `protobuf:"bytes,3,rep,name=txns,proto3" json:"txns,omitempty"`
 }
 
 func (m *GetBlockByHeightResponse) Reset()         { *m = GetBlockByHeightResponse{} }
