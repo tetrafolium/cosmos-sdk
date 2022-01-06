@@ -101,8 +101,7 @@ func (s queryServer) GetBlockByHeight(ctx context.Context, req *GetBlockByHeight
 			if !ok {
 				return nil, fmt.Errorf("could not cast %T to %T", txb, txtypes.Tx{})
 			}
-			protoTx := p.GetProtoTx()
-			txns[i] = protoTx
+			txns[i] = p.GetProtoTx()
 		}
 	}
 
@@ -114,7 +113,7 @@ func (s queryServer) GetBlockByHeight(ctx context.Context, req *GetBlockByHeight
 	return &GetBlockByHeightResponse{
 		BlockId: &protoBlockID,
 		Block:   protoBlock,
-		Txns:    txns,
+		Txs:     txns,
 	}, nil
 }
 

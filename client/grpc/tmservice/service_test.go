@@ -125,8 +125,8 @@ func (s IntegrationTestSuite) TestQueryBlockByHeight() {
 	s.Require().NoError(err)
 	var blockInfoRes tmservice.GetBlockByHeightResponse
 	s.Require().NoError(val.ClientCtx.Codec.UnmarshalJSON(restRes, &blockInfoRes))
-	s.Require().NotZero(len(blockInfoRes.Txns), "expected transactions in this block")
-	s.Require().Equal(blockInfoRes.Txns[0].Body.Memo, "foobar")
+	s.Require().NotZero(len(blockInfoRes.Txs), "expected transactions in this block")
+	s.Require().Equal(blockInfoRes.Txs[0].Body.Memo, "foobar")
 }
 
 func (s IntegrationTestSuite) TestQueryLatestValidatorSet() {

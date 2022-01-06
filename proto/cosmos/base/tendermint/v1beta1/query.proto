@@ -89,7 +89,7 @@ message GetBlockByHeightResponse {
   .tendermint.types.Block   block    = 2;
 
   // Since: cosmos-sdk 0.44.6
-  repeated cosmos.tx.v1beta1.Tx txns = 3;
+  repeated cosmos.tx.v1beta1.Tx txs = 3;
 }
 
 // GetLatestBlockRequest is the request type for the Query/GetLatestBlock RPC method.
