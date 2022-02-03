@@ -1,4 +1,7 @@
 inspecode:
+  global:
+    thresholds:
+      complexity: 200
   tasks:
     - name: mirror-sync
       type: shell
